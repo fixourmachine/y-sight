@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Y-Sight">
+    <meta name="description" content="Offline NICU Y-Site Compatibility Checker">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./icons/icon-512.png" sizes="512x512" type="image/png">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <title>Y-Sight</title>
+    <style>
+        /* CSS FRAMEWORK */
+        :root {
+            --primary: #2563eb; /* Royal Blue */
+            --danger: #dc2626; /* Alarm Red */
+            --bg: #f8fafc; /* Slate 50 */
+            --surface: #ffffff;
+            --text-main: #0f172a; /* Slate 900 */
+            --text-muted: #64748b; /* Slate 500 */
+            --border: #cbd5e1; /* Slate 300 */
+            --focus-ring: rgba(37, 99, 235, 0.2);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; 
+        }
+
+        /* HEADER */
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            z-index: 20;
+            flex-shrink: 0;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-btn {
+            appearance: none;
+            -webkit-appearance: none;
+            border: none;
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+
+        .logo-btn:active {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .logo-btn img {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .header-text {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.025em; line-height: 1.2; }
+        header p { margin: 0; font-size: 0.75rem; opacity: 0.9; font-weight: 400; }
+
+        /* INPUT AREA */
+        .search-container {
+            padding: 1rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            z-index: 15;
+            flex-shrink: 0;
+        }
+
+        .input-wrapper { position: relative; }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 16px; /* Fat finger friendly */
+            padding-right: 40px;
+            font-size: 16px; /* Prevents iOS auto-zoom */
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--text-main);
+            transition: all 0.2s;
+            -webkit-appearance: none;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--focus-ring);
+            background: var(--surface);
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px;
+            cursor: pointer;
+            display: none; 
+            font-size: 1.2rem;
+        }
+
+        /* DROPDOWN */
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            max-height: 50vh;
+            overflow-y: auto;
+            display: none; 
+        }
+
+        .suggestion-item {
+            padding: 14px 16px; /* Fat finger friendly */
+            border-bottom: 1px solid var(--bg);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .suggestion-item:active { background-color: #eff6ff; }
+        .suggestion-item strong { color: var(--primary); }
+        .add-icon { color: var(--primary); font-weight: 900; font-size: 1.2rem; }
+
+        /* MAIN CONTENT */
+        main {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* ALERTS */
+        .alert-box {
+            background-color: #fef2f2;
+            border-left: 6px solid var(--danger);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+            display: none; 
+            box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-title { 
+            color: #991b1b; 
+            font-weight: 800; 
+            font-size: 0.9rem; 
+            text-transform: uppercase; 
+            margin-bottom: 0.75rem; 
+            display: flex; 
+            align-items: center; 
+            letter-spacing: 0.05em;
+        }
+        
+        .alert-icon { margin-right: 0.5rem; font-size: 1.2rem; }
+        
+        .conflict-item { 
+            font-size: 0.95rem; 
+            margin-bottom: 0.75rem; 
+            padding-bottom: 0.75rem; 
+            border-bottom: 1px solid #fecaca; 
+            color: #7f1d1d; 
+        }
+        
+        .conflict-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        
+        .conflict-pair { font-weight: 700; margin-bottom: 2px; }
+        .conflict-nature { font-family: monospace; font-size: 0.8rem; text-transform: uppercase; color: #b91c1c; }
+
+        /* DRUG LIST */
+        .list-header {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            padding-left: 4px;
+        }
+
+        .drug-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .drug-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .drug-name { font-weight: 600; font-size: 1rem; color: var(--text-main); }
+        .drug-id { 
+            font-size: 0.75rem; 
+            color: var(--text-muted); 
+            margin-right: 12px; 
+            font-family: monospace; 
+            background: var(--bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .remove-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 12px; /* Large touch target */
+            margin-right: -12px;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .remove-btn:active { background-color: #fef2f2; color: var(--danger); }
+
+        /* EMPTY STATE */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 50vh;
+            color: var(--text-muted);
+            text-align: center;
+            opacity: 0.5;
+        }
+        .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+
+        /* FOOTER */
+        footer {
+            background-color: var(--bg);
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-row">
+            <button id="logoBtn" class="logo-btn" type="button" aria-label="Clear all active infusions">
+                <img src="./icons/icon-192.png" alt="Y-Sight logo">
+            </button>
+            <div class="header-text">
+                <h1>Y-Sight</h1>
+                <p>Offline Y-Site Compatibility Checker</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="search-container">
+        <div class="input-wrapper">
+            <input type="text" id="drugInput" placeholder="Type drug name (e.g. 'gen')..." autocomplete="off">
+            <button id="clearBtn" class="clear-btn">✕</button>
+        </div>
+        <div id="suggestions" class="suggestions"></div>
+    </div>
+
+    <main id="mainContent">
+        <div id="alertArea" class="alert-box"></div>
+        
+        <div id="activeListContainer" style="display:none;">
+            <div class="list-header">Active Infusions</div>
+            <ul id="drugList" class="drug-list"></ul>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+            <div class="empty-icon">💉</div>
+            <div>No active infusions.<br>Search to add drugs.</div>
+        </div>
+    </main>
+
+    <footer>
+        Sources: Available on request.<br>
+        <strong>Always check clinical guidelines.</strong>
+    </footer>
+
+    <script>
+        /**
+         * Y-SIGHT - V1.0 (Vanilla JS)
+         * Architecture: Single-file PWA with Embedded Data
+         */
+
+        // --- 1. DATASETS ---
+        // Embedded to ensure low-latency and offline capability without external fetches.
+        
+        const DRUG_DB = [
+            {id:"001",n:"Acetylcysteine"},{id:"002",n:"Aciclovir"},{id:"003",n:"Adenosine"},{id:"004",n:"Adrenaline"},
+            {id:"005",n:"Alfacalcidol"},{id:"006",n:"Alfentanil"},{id:"007",n:"Alprostadil (PGE1)"},{id:"008",n:"Alteplase"},
+            {id:"009",n:"Amikacin"},{id:"010",n:"Amiodarone"},{id:"011",n:"Amoxicillin"},{id:"012",n:"Amphotericin (Liposomal)"},
+            {id:"013",n:"Anidulafungin"},{id:"014",n:"Aprotinin"},{id:"015",n:"Atracurium"},{id:"016",n:"Atropine"},
+            {id:"017",n:"Azithromycin"},{id:"018",n:"Benzylpenicillin"},{id:"019",n:"Caffeine Citrate"},{id:"020",n:"Calcium Chloride"},
+            {id:"021",n:"Calcium Gluconate"},{id:"022",n:"Cefotaxime"},{id:"023",n:"Ceftazidime"},{id:"024",n:"Ceftriaxone"},
+            {id:"025",n:"Cefuroxime"},{id:"026",n:"Chloramphenicol"},{id:"027",n:"Ciprofloxacin"},{id:"028",n:"Cisatracurium"},
+            {id:"029",n:"Clarithromycin"},{id:"030",n:"Clindamycin"},{id:"031",n:"Clonazepam"},{id:"032",n:"Co-amoxiclav"},
+            {id:"033",n:"Co-trimoxazole"},{id:"034",n:"Desferrioxamine"},{id:"035",n:"Dexamethasone"},{id:"036",n:"Dexmedetomidine"},
+            {id:"037",n:"Dextrose"},{id:"038",n:"Diamorphine"},{id:"039",n:"Diazepam"},{id:"040",n:"Dicobalt Edetate"},
+            {id:"041",n:"Digoxin"},{id:"042",n:"Dobutamine"},{id:"043",n:"Dopamine"},{id:"044",n:"Erythromycin"},
+            {id:"045",n:"Esmolol"},{id:"046",n:"Fentanyl"},{id:"047",n:"Flucloxacillin"},{id:"048",n:"Fluconazole"},
+            {id:"049",n:"Furosemide"},{id:"050",n:"Ganciclovir"},{id:"051",n:"Gentamicin"},{id:"052",n:"Glucagon"},
+            {id:"053",n:"Glyceryl Trinitrate (GTN)"},{id:"054",n:"Heparin"},{id:"055",n:"Hydralazine"},{id:"056",n:"Hydrocortisone"},
+            {id:"057",n:"Hyoscine Butylbromide"},{id:"058",n:"Ibuprofen"},{id:"059",n:"Immunoglobulin (IVIG)"},{id:"060",n:"Indometacin"},
+            {id:"061",n:"Insulin"},{id:"062",n:"Labetalol"},{id:"063",n:"Levetiracetam"},{id:"064",n:"Lidocaine"},
+            {id:"065",n:"Linezolid"},{id:"066",n:"Lorazepam"},{id:"067",n:"Magnesium Sulphate"},{id:"068",n:"Meropenem"},
+            {id:"069",n:"Methylprednisolone"},{id:"070",n:"Metronidazole"},{id:"071",n:"Micafungin"},{id:"072",n:"Midazolam"},
+            {id:"073",n:"Milrinone"},{id:"074",n:"Morphine"},{id:"075",n:"Naloxone"},{id:"076",n:"Noradrenaline"},
+            {id:"077",n:"Omeprazole"},{id:"078",n:"Paracetamol (IV)"},{id:"079",n:"Phenobarbital"},{id:"080",n:"Phenytoin"},
+            {id:"081",n:"Phytomenadione (Vit K)"},{id:"082",n:"Piperacillin / Tazobactam"},{id:"083",n:"Potassium Chloride"},{id:"084",n:"Potassium Phosphate"},
+            {id:"085",n:"Pralidoxime"},{id:"086",n:"Propofol"},{id:"087",n:"Ranitidine"},{id:"088",n:"Remifentanil"},
+            {id:"089",n:"Rifampicin"},{id:"090",n:"Rocuronium"},{id:"091",n:"Salbutamol"},{id:"092",n:"Sildenafil"},
+            {id:"093",n:"Sodium Bicarbonate"},{id:"094",n:"Sodium Nitroprusside"},{id:"095",n:"Sodium Thiosulfate"},{id:"096",n:"Suxamethonium"},
+            {id:"097",n:"Teicoplanin"},{id:"098",n:"Thiopental"},{id:"099",n:"Tobramycin"},{id:"100",n:"Vancomycin"},
+            {id:"101",n:"Vasopressin"},{id:"102",n:"Vecuronium"},{id:"103",n:"Zidovudine"},{id:"104",n:"Albumin"},
+            {id:"105",n:"Ampicillin"},{id:"106",n:"Amsacrine"},{id:"107",n:"Chlorpromazine"},{id:"108",n:"Haloperidol"},
+            {id:"109",n:"Ketorolac"},{id:"110",n:"Methotrexate"},{id:"111",n:"Ondansetron"},{id:"112",n:"Procainamide"},
+            {id:"113",n:"Isoprenaline"},{id:"114",n:"PN (Aqueous)"},{id:"115",n:"Ketamine"},{id:"116",n:"Clonidine"},
+            {id:"117",n:"Protamine Sulphate"},{id:"118",n:"Neostigmine"},{id:"119",n:"Glycopyrronium"},{id:"120",n:"Sodium Benzoate"},
+            {id:"121",n:"Arginine"},{id:"122",n:"Levocarnitine"},{id:"123",n:"Octreotide"},{id:"124",n:"Filgrastim (G-CSF)"},
+            {id:"125",n:"Sodium Valproate"},{id:"126",n:"Voriconazole"},{id:"127",n:"Caspofungin"},{id:"128",n:"PN (Lipid)"},
+            {id:"129",n:"Sodium Glycerophosphate"},{id:"130",n:"Sugammadex"},{id:"131",n:"Acetazolamide"},{id:"132",n:"Methylene Blue"},
+            {id:"133",n:"Aminophylline"},{id:"134",n:"Pethidine"},{id:"135",n:"Imipenem"},{id:"136",n:"Aztreonam"},
+            {id:"137",n:"Cefepime"},{id:"138",n:"Tetracycline"},{id:"139",n:"Warfarin"},{id:"140",n:"Doxapram"},
+            {id:"141",n:"Hydroxyzine"},{id:"142",n:"Metoclopramide"},{id:"143",n:"Prochlorperazine"},{id:"144",n:"Promethazine"},
+            {id:"145",n:"Polymyxin B"},{id:"146",n:"Idarubicin"},{id:"147",n:"Verapamil"},{id:"148",n:"Vinorelbine"},
+            {id:"149",n:"Tramadol"},{id:"150",n:"Nafcillin"},{id:"151",n:"Ticarcillin"},{id:"152",n:"Pentamidine"},
+            {id:"153",n:"Diltiazem"},{id:"154",n:"Cisplatin"},{id:"155",n:"Cytarabine"},{id:"156",n:"Etoposide"},
+            {id:"157",n:"Fludarabine"},{id:"158",n:"Sodium Chloride 0.9%"},{id:"159",n:"Cefazolin"},
+            {id:"160",n:"Almost all drugs"}
+        ];
+
+        // Format: "LowID_HighID": "Nature of Incompatibility"
+        const CONFLICTS = {
+            "001_044": "Precipitation", "001_138": "Precipitation", "002_042": "Precipitation", "002_043": "Precipitation",
+            "002_074": "Precipitation", "002_134": "Precipitation", "002_082": "Precipitation", "004_093": "Rapid Decomposition",
+            "004_105": "Immediate Decomposition", "004_098": "Precipitation", "006_012": "Precipitation", "006_039": "Precipitation",
+            "006_098": "Precipitation", "009_012": "Precipitation", "009_054": "Precipitation", "009_080": "Crystallisation",
+            "009_086": "Emulsion Disruption", "004_133": "Precipitation", "018_133": "Precipitation", "027_133": "Precipitation",
+            "030_133": "Precipitation", "042_133": "Precipitation", "133_140": "Precipitation", "044_133": "Precipitation",
+            "061_133": "Precipitation", "074_133": "Precipitation", "111_133": "Precipitation", "080_133": "Precipitation",
+            "100_133": "Precipitation", "010_054": "Precipitation", "010_093": "Precipitation", "010_023": "Precipitation",
+            "010_049": "Precipitation", "010_071": "Precipitation", "010_094": "Precipitation", "011_027": "Precipitation",
+            "011_072": "Precipitation", "012_105": "Precipitation", "012_018": "Precipitation", "012_020": "Precipitation",
+            "012_021": "Precipitation", "012_027": "Precipitation", "012_042": "Precipitation", "012_043": "Precipitation",
+            "012_124": "Precipitation", "012_048": "Precipitation", "012_049": "Precipitation", "012_051": "Precipitation",
+            "012_054": "Precipitation", "012_065": "Precipitation", "012_067": "Precipitation", "012_068": "Precipitation",
+            "012_072": "Precipitation", "012_074": "Precipitation", "012_082": "Precipitation", "012_083": "Precipitation",
+            "012_093": "Precipitation", "012_100": "Precipitation", "051_105": "Inactivation (Do not mix)", "072_105": "Gas/Precipitation",
+            "043_105": "Decomposition", "012_013": "Precipitation", "013_105": "Precipitation", "013_022": "Precipitation",
+            "013_082": "Precipitation", "015_098": "Precipitation", "009_017": "Precipitation", "017_046": "Precipitation",
+            "017_051": "Precipitation", "017_109": "Precipitation", "017_074": "Precipitation", "017_082": "Precipitation",
+            "018_051": "Inactivation", "018_099": "Inactivation", "018_080": "Precipitation", "018_100": "Precipitation",
+            "020_024": "FATAL PRECIPITATE", "020_093": "Precipitation (Chalk)", "020_069": "Precipitation", "020_084": "Precipitation",
+            "020_129": "Precipitation", "020_086": "Emulsion Disruption", "021_024": "FATAL PRECIPITATE", "021_093": "Precipitation (Chalk)",
+            "021_069": "Precipitation", "021_084": "Precipitation", "021_129": "Precipitation", "021_086": "Emulsion Disruption",
+            "022_093": "Colour Change/Decomposition", "022_100": "Turbidity", "023_100": "Precipitation", "023_072": "Precipitation",
+            "024_114": "FATAL PRECIPITATE", "024_128": "FATAL PRECIPITATE", "024_124": "Precipitation", "024_106": "Precipitation",
+            "024_152": "Precipitation", "026_107": "Precipitation", "026_048": "Precipitation", "026_141": "Precipitation",
+            "026_142": "Precipitation", "026_145": "Precipitation", "026_143": "Precipitation", "026_144": "Precipitation",
+            "026_100": "Precipitation", "107_133": "Precipitation", "012_107": "Precipitation", "105_107": "Precipitation",
+            "107_136": "Precipitation", "018_107": "Precipitation", "107_137": "Precipitation", "049_107": "Precipitation",
+            "054_107": "Precipitation", "056_107": "Precipitation", "065_107": "Precipitation", "074_107": "Precipitation",
+            "079_107": "Precipitation", "082_107": "Precipitation", "083_107": "Precipitation", "093_107": "Precipitation",
+            "028_086": "Precipitation", "028_109": "Precipitation", "027_054": "Precipitation", "027_093": "Precipitation",
+            "027_049": "Precipitation", "027_067": "Precipitation", "030_105": "Precipitation", "021_030": "Precipitation",
+            "027_030": "Precipitation", "030_124": "Precipitation", "030_048": "Precipitation", "030_146": "Precipitation",
+            "030_067": "Precipitation", "030_080": "Precipitation", "033_048": "Precipitation", "033_065": "Precipitation",
+            "033_072": "Precipitation", "033_147": "Precipitation", "033_148": "Precipitation", "035_072": "Precipitation",
+            "035_100": "Precipitation", "012_036": "Precipitation", "036_039": "Precipitation", "039_160": "Precipitation (Most Drugs)",
+            "012_039": "Precipitation", "015_039": "Precipitation", "039_049": "Precipitation", "039_054": "Precipitation",
+            "039_115": "Precipitation", "039_068": "Precipitation", "039_074": "Precipitation", "039_083": "Precipitation",
+            "039_086": "Precipitation", "010_041": "Precipitation", "041_042": "Precipitation", "041_048": "Precipitation",
+            "041_061": "Precipitation", "041_086": "Precipitation", "042_093": "Decomposition", "042_049": "Precipitation",
+            "042_054": "Precipitation (Variable)", "042_080": "Precipitation", "043_093": "Decomposition", "043_049": "Precipitation",
+            "043_060": "Precipitation", "043_061": "Decomposition", "044_049": "Precipitation", "044_054": "Precipitation",
+            "046_080": "Precipitation", "124_158": "Precipitation (Dilute with G5%)", "049_124": "Precipitation", "051_124": "Precipitation",
+            "054_124": "Precipitation", "068_124": "Precipitation", "069_124": "Precipitation", "082_124": "Precipitation",
+            "047_147": "Precipitation", "021_048": "Precipitation", "048_049": "Precipitation", "049_051": "Precipitation",
+            "049_072": "Precipitation", "049_073": "Immediate Heavy Precipitate", "011_051": "Inactivation", "032_051": "Inactivation",
+            "047_051": "Inactivation", "051_082": "Inactivation", "051_054": "Precipitation", "051_060": "Precipitation",
+            "053_080": "Precipitation", "053_054": "Reduced Anticoagulant Effect", "054_099": "Precipitation", "054_108": "Precipitation",
+            "054_062": "Precipitation", "054_100": "Precipitation", "055_133": "Precipitation", "055_105": "Precipitation",
+            "055_107": "Precipitation", "039_055": "Precipitation", "042_055": "Precipitation", "049_055": "Precipitation",
+            "053_055": "Precipitation", "055_056": "Precipitation", "055_069": "Precipitation", "055_094": "Precipitation",
+            "055_147": "Precipitation", "056_072": "Precipitation", "056_080": "Precipitation", "060_099": "Precipitation",
+            "061_093": "Decomposition", "061_080": "Precipitation", "098_115": "Precipitation (Barbiturates)", "062_093": "Precipitation",
+            "024_065": "Precipitation", "065_080": "Precipitation", "021_067": "Precipitation", "027_067": "Precipitation",
+            "068_111": "Precipitation", "021_068": "Precipitation", "070_136": "Precipitation", "043_070": "Precipitation",
+            "070_124": "Precipitation", "068_070": "Precipitation", "070_139": "Incompatible", "069_086": "Precipitation",
+            "010_071": "Precipitation", "042_071": "Precipitation", "072_093": "Precipitation", "072_104": "Precipitation",
+            "073_112": "Precipitation", "074_080": "Precipitation", "074_093": "Precipitation", "076_093": "Decomposition",
+            "061_076": "Decomposition", "076_080": "Precipitation", "072_077": "Precipitation", "077_100": "Precipitation",
+            "054_128": "Destabilisation/Cracking", "080_128": "Incompatible", "039_078": "Precipitation", "078_107": "Precipitation",
+            "010_080": "Crystallisation", "080_083": "Crystallisation", "080_087": "Crystallisation", "080_093": "Crystallisation",
+            "080_100": "Crystallisation", "080_101": "Crystallisation", "037_080": "Crystallisation (Use Saline)", "002_082": "Precipitation",
+            "082_100": "Precipitation", "039_083": "Precipitation", "021_084": "Precipitation", "020_084": "Precipitation",
+            "010_084": "Precipitation", "027_084": "Precipitation", "027_086": "Precipitation", "051_086": "Precipitation",
+            "086_110": "Precipitation", "012_087": "Precipitation", "015_087": "Precipitation", "039_087": "Precipitation",
+            "066_087": "Precipitation", "072_087": "Precipitation", "079_087": "Precipitation", "080_087": "Precipitation",
+            "087_098": "Precipitation", "012_088": "Precipitation", "088_107": "Precipitation", "039_088": "Precipitation",
+            "089_153": "Precipitation", "089_149": "Precipitation", "093_113": "Decomposition", "021_129": "Precipitation",
+            "020_129": "Precipitation", "096_098": "Precipitation", "096_150": "Precipitation", "027_097": "Precipitation",
+            "051_097": "Precipitation (Mixed)", "097_099": "Precipitation (Mixed)", "004_098": "Precipitation", "018_098": "Precipitation",
+            "021_098": "Precipitation", "098_107": "Precipitation", "030_098": "Precipitation", "042_098": "Precipitation",
+            "043_098": "Precipitation", "046_098": "Precipitation", "049_098": "Precipitation", "054_098": "Precipitation",
+            "061_098": "Precipitation", "062_098": "Precipitation", "064_098": "Precipitation", "067_098": "Precipitation",
+            "072_098": "Precipitation", "074_098": "Precipitation", "076_098": "Precipitation", "080_098": "Precipitation",
+            "090_098": "Precipitation", "093_098": "Precipitation", "098_102": "Precipitation", "012_099": "Precipitation",
+            "099_159": "Precipitation", "082_099": "Inactivation", "099_151": "Inactivation", "022_100": "Precipitation",
+            "023_100": "Precipitation", "024_100": "Precipitation", "035_100": "Precipitation", "054_100": "Precipitation",
+            "079_100": "Precipitation", "082_100": "Precipitation", "080_101": "Precipitation"
+        };
+
+        // --- 2. STATE & DOM ELEMENTS ---
+        let selectedDrugs = [];
+        const dom = {
+            input: document.getElementById('drugInput'),
+            clearBtn: document.getElementById('clearBtn'),
+            suggestions: document.getElementById('suggestions'),
+            list: document.getElementById('drugList'),
+            alertArea: document.getElementById('alertArea'),
+            emptyState: document.getElementById('emptyState'),
+            listContainer: document.getElementById('activeListContainer')
+        };
+
+        // --- 3. INDEXED DB (PERSISTENCE) ---
+        const DB_NAME = 'Y_Sight_DB';
+        const DB_VERSION = 1;
+        let db;
+
+        function initDB() {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onupgradeneeded = (e) => {
+                const d = e.target.result;
+                if (!d.objectStoreNames.contains('selection')) {
+                    d.createObjectStore('selection', { keyPath: 'id' });
+                }
+            };
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                loadSelection();
+            };
+            request.onerror = (e) => {
+                console.warn("IndexedDB failed. Falling back to memory.", e);
+            };
+        }
+
+        function saveDrug(drug) {
+            if (!db) return;
+            const tx = db.transaction('selection', 'readwrite');
+            tx.objectStore('selection').put(drug);
+        }
+
+        function removeDrugDB(id) {
+            if (!db) return;
+            const tx = db.transaction('selection', 'readwrite');
+            tx.objectStore('selection').delete(id);
+        }
+
+        function loadSelection() {
+            if (!db) return;
+            const tx = db.transaction('selection', 'readonly');
+            const store = tx.objectStore('selection');
+            const req = store.getAll();
+            req.onsuccess = () => {
+                selectedDrugs = req.result || [];
+                renderList();
+                checkConflicts();
+            };
+        }
+
+        // --- 4. LOGIC ---
+
+        function addDrug(drug) {
+            // Prevent duplicates
+            if (selectedDrugs.find(d => d.id === drug.id)) {
+                dom.input.value = '';
+                dom.clearBtn.style.display = 'none';
+                dom.suggestions.style.display = 'none';
+                return;
+            }
+            
+            selectedDrugs.push(drug);
+            saveDrug(drug);
+            renderList();
+            checkConflicts();
+            
+            // Reset Input
+            dom.input.value = '';
+            dom.clearBtn.style.display = 'none';
+            dom.suggestions.style.display = 'none';
+            dom.input.focus();
+        }
+
+        function removeDrug(id) {
+            selectedDrugs = selectedDrugs.filter(d => d.id !== id);
+            removeDrugDB(id);
+            renderList();
+            checkConflicts();
+        }
+
+        function clearAllDrugs() {
+            selectedDrugs = [];
+
+            if (db) {
+                const tx = db.transaction('selection', 'readwrite');
+                tx.objectStore('selection').clear();
+            }
+
+            // Reset UI
+            dom.input.value = '';
+            dom.clearBtn.style.display = 'none';
+            dom.suggestions.style.display = 'none';
+            dom.alertArea.style.display = 'none';
+
+            renderList();
+            checkConflicts();
+            dom.input.focus();
+        }
+
+        function checkConflicts() {
+            const alerts = [];
+            
+            // Double Loop Comparison O(N^2) - Negligible for N < 20
+            for (let i = 0; i < selectedDrugs.length; i++) {
+                for (let j = i + 1; j < selectedDrugs.length; j++) {
+                    const d1 = selectedDrugs[i];
+                    const d2 = selectedDrugs[j];
+                    
+                    // Sort IDs to ensure Key matches the Map format (LowID_HighID)
+                    const [idA, idB] = [d1.id, d2.id].sort();
+                    const key = `${idA}_${idB}`;
+                    
+                    if (CONFLICTS[key]) {
+                        alerts.push({
+                            pair: `${d1.n} + ${d2.n}`,
+                            nature: CONFLICTS[key]
+                        });
+                    }
+                }
+            }
+            renderAlerts(alerts);
+        }
+
+        // --- 5. RENDERING ---
+
+        function renderList() {
+            dom.list.innerHTML = '';
+            
+            if (selectedDrugs.length === 0) {
+                dom.emptyState.style.display = 'flex';
+                dom.listContainer.style.display = 'none';
+                return;
+            }
+            
+            dom.emptyState.style.display = 'none';
+            dom.listContainer.style.display = 'block';
+            
+            // Reverse order to show newest added at top
+            [...selectedDrugs].reverse().forEach(drug => {
+                const li = document.createElement('li');
+                li.className = 'drug-item';
+                li.innerHTML = `
+                    <div style="display:flex; align-items:center; overflow:hidden;">
+                        <span class="drug-name truncate">${drug.n}</span>
+                    </div>
+                    <button class="remove-btn" aria-label="Remove ${drug.n}" onclick="removeDrug('${drug.id}')">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                `;
+                dom.list.appendChild(li);
+            });
+        }
+
+        function renderAlerts(alerts) {
+            if (alerts.length === 0) {
+                dom.alertArea.style.display = 'none';
+                return;
+            }
+            
+            dom.alertArea.innerHTML = `
+                <div class="alert-title">
+                    <span class="alert-icon">⚠️</span> Y-Site Incompatibility Detected
+                </div>
+            `;
+            
+            alerts.forEach(alert => {
+                const div = document.createElement('div');
+                div.className = 'conflict-item';
+                div.innerHTML = `
+                    <div class="conflict-pair">${alert.pair}</div>
+                    <div class="conflict-nature">${alert.nature}</div>
+                `;
+                dom.alertArea.appendChild(div);
+            });
+            
+            dom.alertArea.style.display = 'block';
+        }
+
+        function renderSuggestions(query) {
+            dom.suggestions.innerHTML = '';
+            
+            if (query.length < 2) {
+                dom.suggestions.style.display = 'none';
+                return;
+            }
+
+            const lowerQ = query.toLowerCase();
+            
+            // Filter drugs that match query AND are not already selected
+            const matches = DRUG_DB.filter(d => 
+                d.n.toLowerCase().includes(lowerQ) && 
+                !selectedDrugs.find(sel => sel.id === d.id)
+            ).slice(0, 50); // Performance cap
+
+            if (matches.length === 0) {
+                dom.suggestions.style.display = 'none';
+                return;
+            }
+
+            matches.forEach(drug => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                
+                // Highlight Logic using Regex
+                // Escaping special characters in query if any
+                const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${safeQuery})`, 'gi');
+                const highlightedName = drug.n.replace(regex, '<strong>$1</strong>');
+                
+                div.innerHTML = `
+                    <span>${highlightedName}</span>
+                    <span class="add-icon">+</span>
+                `;
+                
+                // Closure to capture drug object
+                div.onclick = () => addDrug(drug);
+                
+                dom.suggestions.appendChild(div);
+            });
+            
+            dom.suggestions.style.display = 'block';
+        }
+
+        // --- 6. EVENT LISTENERS ---
+
+        dom.input.addEventListener('input', (e) => {
+            const val = e.target.value;
+            dom.clearBtn.style.display = val.length > 0 ? 'block' : 'none';
+            renderSuggestions(val);
+        });
+
+        dom.clearBtn.addEventListener('click', () => {
+            dom.input.value = '';
+            dom.suggestions.style.display = 'none';
+            dom.clearBtn.style.display = 'none';
+            dom.input.focus();
+        });
+
+        const logoBtn = document.getElementById('logoBtn');
+        if (logoBtn) {
+            logoBtn.addEventListener('click', () => {
+                clearAllDrugs();
+            });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-container')) {
+                dom.suggestions.style.display = 'none';
+            }
+        });
+        
+        // Expose removeDrug to global scope for inline onclick handler
+        window.removeDrug = removeDrug;
+
+        // Start
+        initDB();
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("./sw.js");
+        });
+    }
+    </script>
+</body>
+</html>
