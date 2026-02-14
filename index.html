@@ -183,6 +183,35 @@
             animation: slideDown 0.2s ease-out;
         }
 
+        .ok-box {
+            background-color: #f0fdf4;
+            border-left: 6px solid #16a34a;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+            display: none;
+            box-shadow: 0 2px 4px rgba(22, 163, 74, 0.10);
+            animation: slideDown 0.2s ease-out;
+        }
+
+        .ok-title {
+            color: #166534;
+            font-weight: 800;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            letter-spacing: 0.05em;
+        }
+
+        .ok-icon { margin-right: 0.5rem; font-size: 1.2rem; }
+
+        .ok-message {
+            font-size: 0.95rem;
+            color: #14532d;
+        }
+
         @keyframes slideDown {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -323,6 +352,7 @@
 
     <main id="mainContent">
         <div id="alertArea" class="alert-box"></div>
+        <div id="okArea" class="ok-box"></div>
         
         <div id="activeListContainer" style="display:none;">
             <div class="list-header">Active Infusions</div>
@@ -472,7 +502,44 @@
             "090_098": "Precipitation", "093_098": "Precipitation", "098_102": "Precipitation", "012_099": "Precipitation",
             "099_159": "Precipitation", "082_099": "Inactivation", "099_151": "Inactivation", "022_100": "Precipitation",
             "023_100": "Precipitation", "024_100": "Precipitation", "035_100": "Precipitation", "054_100": "Precipitation",
-            "079_100": "Precipitation", "082_100": "Precipitation", "080_101": "Precipitation"
+            "079_100": "Precipitation", "082_100": "Precipitation", "080_101": "Precipitation",
+
+            /* --- Critical Safety Updates (Medusa / published compatibility data) --- */
+            /* Caffeine Citrate (019) */
+            "002_019": "Physical incompatibility (precipitation/turbidity)",
+            "019_049": "Physical incompatibility (precipitation/turbidity)",
+            "019_053": "Physical incompatibility (precipitation/turbidity)",
+            "019_066": "Physical incompatibility (precipitation/turbidity)",
+
+            /* Amiodarone (010) */
+            "010_032": "Precipitation",
+            "010_067": "Precipitation",
+            "010_068": "Precipitation",
+            "010_133": "Precipitation",
+
+            /* Cefuroxime (025) */
+            "009_025": "Inactivation (beta-lactam/aminoglycoside)",
+            "017_025": "Precipitation",
+            "025_029": "Precipitation",
+            "025_048": "Precipitation",
+            "025_051": "Inactivation (beta-lactam/aminoglycoside)",
+            "025_072": "Precipitation",
+            "025_099": "Inactivation (beta-lactam/aminoglycoside)",
+            "025_100": "Precipitation",
+            "025_124": "Precipitation",
+
+            /* Alteplase (008) */
+            "008_054": "Precipitation",
+
+            /* Amikacin (009) - Cephalosporins */
+            "009_022": "Inactivation (beta-lactam/aminoglycoside)",
+            "009_023": "Inactivation (beta-lactam/aminoglycoside)",
+            "009_024": "Inactivation (beta-lactam/aminoglycoside)",
+
+            /* Acetylcysteine (001) */
+            "001_023": "Precipitation",
+            "001_053": "Precipitation",
+            "001_094": "Precipitation"
         };
 
         // --- 2. STATE & DOM ELEMENTS ---
@@ -483,6 +550,7 @@
             suggestions: document.getElementById('suggestions'),
             list: document.getElementById('drugList'),
             alertArea: document.getElementById('alertArea'),
+            okArea: document.getElementById('okArea'),
             emptyState: document.getElementById('emptyState'),
             listContainer: document.getElementById('activeListContainer')
         };
@@ -576,6 +644,7 @@
             dom.clearBtn.style.display = 'none';
             dom.suggestions.style.display = 'none';
             dom.alertArea.style.display = 'none';
+            dom.okArea.style.display = 'none';
 
             renderList();
             checkConflicts();
@@ -604,6 +673,18 @@
                 }
             }
             renderAlerts(alerts);
+            // Show a reassuring status banner when 2+ drugs are selected and no conflicts are detected
+            if (alerts.length === 0 && selectedDrugs.length >= 2) {
+                dom.okArea.innerHTML = `
+                    <div class="ok-title">
+                        <span class="ok-icon">✅</span> No conspicuous incompatibilities detected
+                    </div>
+                    <div class="ok-message">Based on the embedded dataset for the selected drugs.</div>
+                `;
+                dom.okArea.style.display = 'block';
+            } else {
+                dom.okArea.style.display = 'none';
+            }
         }
 
         // --- 5. RENDERING ---
@@ -642,6 +723,7 @@
         function renderAlerts(alerts) {
             if (alerts.length === 0) {
                 dom.alertArea.style.display = 'none';
+                dom.okArea && (dom.okArea.style.display = (selectedDrugs.length >= 2 ? 'block' : 'none'));
                 return;
             }
             
@@ -660,7 +742,7 @@
                 `;
                 dom.alertArea.appendChild(div);
             });
-            
+            if (dom.okArea) dom.okArea.style.display = 'none';
             dom.alertArea.style.display = 'block';
         }
 
