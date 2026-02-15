@@ -6,7 +6,9 @@
   Bump CACHE_VERSION when you change any core asset.
 */
 
-const CACHE_VERSION = "v1";
+// Bump this on every deploy that changes *any* cached asset.
+// Consider setting it to a date stamp like "2026-02-15-1".
+const CACHE_VERSION = "v2";
 const CORE_CACHE = `y-sight-core-${CACHE_VERSION}`;
 
 // Keep this list small and stable.
@@ -54,22 +56,63 @@ self.addEventListener("fetch", (event) => {
   // Only same-origin.
   if (url.origin !== self.location.origin) return;
 
-  // Cache-first for core assets.
-  if (CORE_ASSETS.some((p) => url.pathname.endsWith(p.replace("./", "")))) {
+  const accept = req.headers.get("accept") || "";
+  const isHTML = req.mode === "navigate" || accept.includes("text/html");
+
+  // 1) Navigations / HTML: NETWORK-FIRST to prevent stale app shell winning.
+  //    Fallback to cached index.html when offline.
+  if (isHTML) {
     event.respondWith(
-      caches.match(req).then((cached) => cached || fetch(req))
+      (async () => {
+        const cache = await caches.open(CORE_CACHE);
+        try {
+          const fresh = await fetch(req, { cache: "no-store" });
+          if (fresh && fresh.ok) {
+            // Cache the latest HTML so offline still works.
+            cache.put("./index.html", fresh.clone());
+          }
+          return fresh;
+        } catch (e) {
+          return (
+            (await cache.match("./index.html")) ||
+            (await caches.match("./index.html"))
+          );
+        }
+      })()
     );
     return;
   }
 
-  // Network-first for everything else.
-  event.respondWith(
-    fetch(req)
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CORE_CACHE).then((cache) => cache.put(req, copy));
+  // 2) Cache-first for core static assets (icons, manifest, etc.)
+  //    If not cached yet, fetch and populate cache.
+  const isCoreAsset = CORE_ASSETS.some((p) => url.pathname.endsWith(p.replace("./", "")));
+  if (isCoreAsset) {
+    event.respondWith(
+      (async () => {
+        const cached = await caches.match(req);
+        if (cached) return cached;
+        const res = await fetch(req);
+        if (res && res.ok) {
+          const cache = await caches.open(CORE_CACHE);
+          cache.put(req, res.clone());
+        }
         return res;
-      })
-      .catch(() => caches.match(req))
+      })()
+    );
+    return;
+  }
+
+  // 3) Everything else: NETWORK-FIRST with cache fallback.
+  event.respondWith(
+    (async () => {
+      const cache = await caches.open(CORE_CACHE);
+      try {
+        const res = await fetch(req);
+        if (res && res.ok) cache.put(req, res.clone());
+        return res;
+      } catch (e) {
+        return (await cache.match(req)) || (await caches.match(req));
+      }
+    })()
   );
 });
